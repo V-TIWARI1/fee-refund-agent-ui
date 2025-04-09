@@ -1,6 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
+import IframeMessage from "./IframeMessage";
+import FullscreenModal from "./FullscreenModal";
 import "./App.css";
 
 function App() {
@@ -8,50 +10,102 @@ function App() {
   const [chatHistory, setChatHistory] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fullscreenHtml, setFullscreenHtml] = useState(null);
   const chatEndRef = useRef(null);
+  const processingRef = useRef(false);
 
+  
+  useEffect(() => {
+    scrollToBottom();
+  }, [chatHistory, loading]);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
-  }, [chatHistory, loading]);
-
-  useEffect(() => {
     const id = uuidv4();
     setSessionId(id);
 
-    axios.get(`http://localhost:8000/welcome/${id}`)
-      .then(res => {
-        setChatHistory([{ role: "assistant", content: res.data.welcome_message }]);
-      })
-      .catch(err => {
-        setChatHistory([{ role: "assistant", content: "Welcome! (Failed to load welcome message)" }]);
-        console.error(err);
-      });
+    axios.get(`http://localhost:8000/welcome/${id}`).then((res) => {
+      const welcome = res.data.html
+        ? { role: "assistant", iframeContent: res.data.html }
+        : { role: "assistant", content: res.data.message || "Welcome!" };
+      setChatHistory([welcome]);
+    });
   }, []);
 
   const handleSend = async () => {
     if (!input.trim()) return;
-  
+
     const newChat = [...chatHistory, { role: "user", content: input }];
     setChatHistory(newChat);
     setInput("");
-    setLoading(true); // Show typing indicator
-  
+    setLoading(true);
+
     try {
       const res = await axios.post("http://localhost:8000/chat", {
         session_id: sessionId,
         user_input: input,
       });
-  
-      setChatHistory([...newChat, { role: "assistant", content: res.data.response }]);
-    } catch (error) {
-      setChatHistory([...newChat, { role: "assistant", content: "Oops! Something went wrong." }]);
+
+      const assistantMsg = res.data.html
+        ? { role: "assistant", iframeContent: res.data.html }
+        : { role: "assistant", content: res.data.message || "No response." };
+
+      setChatHistory([...newChat, assistantMsg]);
+      console.log("ChatHistory"+chatHistory);
+    } catch (e) {
+      console.error(e);
     } finally {
-      setLoading(false); // Hide typing indicator
+      setLoading(false);
+    }
+  };
+
+  const handleSendWithInput = async (data) => {
+    if (!data.trim() || processingRef.current) return;
+  
+    processingRef.current = true; // lock it
+    setInput("");
+    setLoading(true);
+  
+    const userMsg = { role: "user", content: data };
+    setChatHistory(prev => [...prev, userMsg]);
+  
+    try {
+      const res = await axios.post("http://localhost:8000/chat", {
+        session_id: sessionId,
+        user_input: data,
+      });
+  
+      const assistantMsg = res.data.html
+        ? { role: "assistant", iframeContent: res.data.html }
+        : { role: "assistant", content: res.data.message || "No response." };
+  
+      setChatHistory(prev => [...prev, assistantMsg]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+      processingRef.current = false; // release lock
+    }
+  };
+  const sendChatToServer = async (data, newChat) => {
+    try {
+      const res = await axios.post("http://localhost:8000/chat", {
+        session_id: sessionId,
+        user_input: data,
+      });
+  
+      const assistantMsg = res.data.html
+        ? { role: "assistant", iframeContent: res.data.html }
+        : { role: "assistant", content: res.data.message || "No response." };
+  
+      setChatHistory((prevChat) => [...prevChat, assistantMsg]);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -60,41 +114,55 @@ function App() {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', backgroundColor: '#f4f6f9', height: '100vh' }}>
-    <div className="chat-container">
-    <div className="chat-header">
-      <div className="header-title">
-        <img src="/favicon.ico" alt="GVEE Logo" className="header-icon" />
-        <span className="title-text">GVEE Bank Virtual Assistant</span>
+    <div className="chat-wrapper">
+      <div className="chat-container">
+      <div className="top-banner">
+         GVEE Bank Fee Refund AI Assistant
       </div>
-      <p className="sub-title">Your Secure Digital Banking Support</p>
-    </div>
-      <div className="chat-box">
+        <div className="chat-box">
         {chatHistory.map((msg, i) => (
           <div key={i} className={`chat-message ${msg.role}`}>
-            <span>{msg.content}</span>
+            {msg.role === "assistant" && msg.iframeContent ? (
+              <IframeMessage
+                html={msg.iframeContent}
+                index={i}
+                onClick={() => {
+                  console.log('in FUll screen mode');
+                  setFullscreenHtml(msg.iframeContent)
+                }}
+                handleSendWithInput={handleSendWithInput}
+              />
+            ) : (
+              <span>{msg.content}</span>
+            )}
           </div>
         ))}
+
         {loading && (
           <div className="chat-message assistant">
-          <span className="typing-indicator">AI Assistant is typing...</span>
+            <span>AI Assistant is typing...</span>
           </div>
         )}
+
         <div ref={chatEndRef} />
+        <div className="chat-input">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="Type your message..."
+          />
+          <button onClick={handleSend}>Send</button>
+        </div>
+        </div>
       </div>
-      <div className="chat-input">
-        <input
-          type="text"
-          value={input}
-          placeholder="Type your message..."
-          onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
-        />
-        <button onClick={handleSend}>Send</button>
-      </div>
+
+      {fullscreenHtml && (
+        <FullscreenModal html={fullscreenHtml} onClose={() => setFullscreenHtml(null)} />
+      )}
     </div>
-  </div>
-);
+  );
 }
 
 export default App;
