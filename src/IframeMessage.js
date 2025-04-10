@@ -81,18 +81,30 @@ const IframeMessage = ({ html, onClick, index, handleSendWithInput }) => {
 />
 
 
-  <div
+<button
     onClick={onClick}
     style={{
       position: "absolute",
-      top: 0,
-      left: 0,
-      width: "25%", // Leave space for scrollbar
-      bottom: 0,
+      top: "8px",
+      left: "8px",
+      width: "28px",
+      height: "28px",
       zIndex: 10,
+      backgroundColor: "#ffffffcc",
+      border: "1px solid #ccc",
+      borderRadius: "4px",
+      fontWeight: "bold",
+      fontSize: "16px",
       cursor: "pointer",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.2)",
     }}
-  />
+    title="Expand"
+  >
+    &#x2750; {/* Unicode for a square-shaped box: ❐ */}
+  </button>
 </div>
 
   );
