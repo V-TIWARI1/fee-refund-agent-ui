@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 
-const IframeMessage = ({ html, onClick, index, handleSendWithInput }) => {
+const IframeMessage = ({ html, onClick, index, isActive, handleSendWithInput }) => {
+
   const iframeRef = useRef(null);
   const [height, setHeight] = useState(30); // Default minimal height
 
@@ -59,54 +60,69 @@ const IframeMessage = ({ html, onClick, index, handleSendWithInput }) => {
   `;
 
   return (
-    <div  style={{
-    position: "relative",
-    width: "100%",
-    overflow: "hidden",
-  }}>
-
-  <iframe
-  ref={iframeRef}
-  srcDoc={srcDoc}
-  style={{
-    width: "100%",
-    height: `${height}px`,
-    border: "none",
-    borderRadius: "8px",
-    overflow: "hidden", // Always "hidden" on iframe; content scrolls inside iframe
-    display: "block", // Prevents inline iframe weird spacing
-  }}
-  sandbox="allow-scripts allow-same-origin"
-  title={`iframe-${index}`}
-/>
-
-
-<button
-    onClick={onClick}
-    style={{
-      position: "absolute",
-      top: "8px",
-      left: "8px",
-      width: "28px",
-      height: "28px",
-      zIndex: 10,
-      backgroundColor: "#ffffffcc",
-      border: "1px solid #ccc",
-      borderRadius: "4px",
-      fontWeight: "bold",
-      fontSize: "16px",
-      cursor: "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: "0 1px 4px rgba(0, 0, 0, 0.2)",
-    }}
-    title="Expand"
-  >
-    &#x2750; {/* Unicode for a square-shaped box: ❐ */}
-  </button>
-</div>
-
+    <div style={{ position: "relative", width: "100%", overflow: "hidden" }}>
+    {/* Iframe itself */}
+    <iframe
+      ref={iframeRef}
+      srcDoc={srcDoc}
+      style={{
+        width: "100%",
+        height: `${height}px`,
+        border: "none",
+        borderRadius: "8px",
+        overflow: "hidden",
+        display: "block",
+        pointerEvents: isActive ? "auto" : "none", // disable interaction if not active
+        opacity: isActive ? 1 : 0.6, // visually dim old ones
+      }}
+      sandbox="allow-scripts allow-same-origin"
+      title={`iframe-${index}`}
+    />
+  
+    {/* Overlay only for inactive ones */}
+    {!isActive && (
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: `${height}px`,
+          zIndex: 5,
+          cursor: "not-allowed",
+        }}
+      />
+    )}
+  
+    {/* Expand button only shown if active */}
+    {isActive && (
+      <button
+        onClick={onClick}
+        style={{
+          position: "absolute",
+          top: "8px",
+          left: "8px",
+          width: "28px",
+          height: "28px",
+          zIndex: 10,
+          backgroundColor: "#ffffffcc",
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          fontWeight: "bold",
+          fontSize: "16px",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 1px 4px rgba(0, 0, 0, 0.2)",
+        }}
+        title="Expand"
+      >
+        &#x2750;
+      </button>
+    )}
+  </div>
+  
   );
 };
 

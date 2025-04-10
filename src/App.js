@@ -120,23 +120,31 @@ function App() {
          GVEE Bank Fee Refund AI Assistant
       </div>
         <div className="chat-box">
-        {chatHistory.map((msg, i) => (
-          <div key={i} className={`chat-message ${msg.role}`}>
-            {msg.role === "assistant" && msg.iframeContent ? (
-              <IframeMessage
-                html={msg.iframeContent}
-                index={i}
-                onClick={() => {
-                  console.log('in FUll screen mode');
-                  setFullscreenHtml(msg.iframeContent)
-                }}
-                handleSendWithInput={handleSendWithInput}
-              />
-            ) : (
-              <span>{msg.content}</span>
-            )}
-          </div>
-        ))}
+        {chatHistory.map((msg, i) => {
+          const isLastAssistant =
+            msg.role === "assistant" &&
+            [...chatHistory].reverse().find((m) => m.role === "assistant") === msg;
+
+              return (
+                <div key={i} className={`chat-message ${msg.role}`}>
+                  {msg.role === "assistant" && msg.iframeContent ? (
+                    <IframeMessage
+                      html={msg.iframeContent}
+                      index={i}
+                      isActive={isLastAssistant}
+                      onClick={() => {
+                        if (isLastAssistant) {
+                          setFullscreenHtml(msg.iframeContent);
+                        }
+                      }}
+                      handleSendWithInput={handleSendWithInput}
+                    />
+                  ) : (
+                    <span>{msg.content}</span>
+                  )}
+                </div>
+              );
+        })}
 
         {loading && (
           <div className="chat-message assistant">
