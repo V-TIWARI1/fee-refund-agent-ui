@@ -117,7 +117,7 @@ function App() {
     <div className="chat-wrapper">
       <div className="chat-container">
       <div className="top-banner">
-         GVEE Bank Fee Refund AI Assistant
+         Chase Bank Fee Refund AI Assistant
       </div>
         <div className="chat-box">
         {chatHistory.map((msg, i) => {
